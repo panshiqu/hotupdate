@@ -24,18 +24,16 @@ if [ -f $md5file ]; then
 	echo "version" $1 "exists"
 	read -p "clear it? [Y/n]" ch
 	if [ "$(echo $ch | tr '[a-z]' '[A-Z]' | cut -c 1)" == "Y" ]; then
-		rm -rf publish/3*
+		rm -rf publish/$1*
 	else
 		exit
 	fi
 fi
 
-traverse project
+#log version
+echo $1 > project/version
 
-#mkdir
-for (( i=0; i<$1; i++ )); do
-	mkdir -p "publish/${1}/${i}_to_${1}"
-done
+traverse project
 
 cat $md5file | while read line; do
 	md5=${line:0:32}
@@ -43,8 +41,20 @@ cat $md5file | while read line; do
 
 	#diff version
 	for (( i=0; i<$1; i++ )); do
+		path=${name/#project/publish\/${1}\/${i}_to_${1}}
+		path=${path%/*}
+
+		if [ ! -d $path ]; then
+			mkdir -p $path
+		fi
+
 		if [ "$(cat publish/$i.md5 | grep $name | awk '{ print $1 }')" != "$md5" ]; then
-			cp $name ${name/#project/publish\/${1}\/${i}_to_${1}}
+			cp $name $path
 		fi
 	done
+done
+
+#zip
+for (( i=0; i<$1; i++ )); do
+	zip -jqr publish/${1}/${i}_to_${1} publish/${1}/${i}_to_${1}/*
 done
